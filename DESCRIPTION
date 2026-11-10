@@ -1,0 +1,12 @@
+Package: kmeans625
+Title: K-Means Clustering with Lloyd's Algorithm
+Version: 0.0.0.9000
+Authors@R:
+    person("Clara M", "Bowman", role = c("aut", "cre"),
+           email = "claraswims03@gmail.com")
+Description: A from-scratch implementation of the standard k-means
+    clustering algorithm (Lloyd's algorithm), written for Biostat 625
+    Homework 4.
+License: GPL-2
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
