@@ -10,3 +10,7 @@ Description: A from-scratch implementation of the standard k-means
 License: GPL-2
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.1
