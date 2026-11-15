@@ -11,6 +11,10 @@ License: GPL-2
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Suggests: 
+    bench,
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.1
+VignetteBuilder: knitr

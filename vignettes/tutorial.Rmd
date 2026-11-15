@@ -1,0 +1,160 @@
+---
+title: "kmeans625 tutorial"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{kmeans625 tutorial}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(kmeans625)
+```
+
+`kmeans625()` groups the rows of a numeric matrix into `k` clusters
+using the standard k-means algorithm (Lloyd's algorithm). It repeats two
+steps until the cluster assignments stop changing or until a
+pre-specified maximum number of iterations (`iter.max`) is reached:
+
+1.  assign each point to its nearest center;
+2.  move each center to the mean of the points assigned to it.
+
+The starting centers are either given by the user or chosen at random
+from the rows of the data. Since final cluster assignments vary based on
+the starting centers, the algorithm may be repeated `nstart` times and
+the partition with the lowest total within-cluster sum of squares
+(`tot.withinss`) is selected.
+
+This vignette shows how to use the function, then compares it with
+`stats::kmeans()` for correctness and speed.
+
+## Basic usage
+
+To cluster the four measurements in `iris` into three groups:
+
+```{r usage}
+x <- as.matrix(iris[, 1:4])
+set.seed(625)
+fit <- kmeans625(x, centers = 3, iter.max = 50, nstart = 10)
+fit$size
+fit$centers
+```
+
+`centers = 3` asks for three clusters from random starting rows,
+`iter.max = 50` allows up to 50 iterations, and `nstart = 10` tries ten
+random starts.
+
+The clusters line up closely with the three species:
+
+```{r species}
+table(cluster = fit$cluster, species = iris$Species)
+```
+
+```{r plot, fig.width = 5, fig.height = 4}
+petal <- c("Petal.Length", "Petal.Width")
+plot(x[, petal], col = fit$cluster, pch = 16)
+points(fit$centers[, petal], pch = 4, cex = 2, lwd = 3)  # centers as crosses
+```
+
+`centers` can also be a matrix of starting centers, one row per cluster.
+The result is then fully determined, with no randomness:
+
+```{r matrix-centers}
+init <- x[c(1, 51, 101), ]
+fit2 <- kmeans625(x, centers = init)
+fit2$size
+```
+
+## Correctness
+
+`stats::kmeans()` uses a different algorithm by default, so the
+comparison uses `algorithm = "Lloyd"`. Both functions are given the same
+starting centers, so they should return the same result.
+
+With `nstart` of 2 or more, the two functions draw their random starts
+differently, so the same seed gives different starting centers; that
+case is not compared here.
+
+On `iris`:
+
+```{r correct-iris}
+ours <- kmeans625(x, centers = init, iter.max = 50)
+ref <- stats::kmeans(x, centers = init, iter.max = 50, algorithm = "Lloyd")
+
+all.equal(ours$cluster, ref$cluster, check.attributes = FALSE)
+all.equal(ours$centers, ref$centers, check.attributes = FALSE)
+all.equal(ours$withinss, ref$withinss)
+all.equal(ours$tot.withinss, ref$tot.withinss)
+all.equal(ours$size, ref$size)
+all.equal(ours$iter, ref$iter)
+```
+
+On simulated data of different sizes, the function below draws `n`
+points in `p` dimensions from `k` separated groups, and uses the first
+point of each group as its starting center.
+
+```{r sim-data}
+sim_data <- function(n, p, k) {
+  group <- sample(k, n, replace = TRUE)
+  x <- matrix(rnorm(n * p), ncol = p) + 4 * group
+  init <- x[match(1:k, group), , drop = FALSE]
+  return(list(x = x, init = init))
+}
+```
+
+```{r correct-sim}
+set.seed(625)
+settings <- data.frame(n = c(100, 500, 2000), p = c(2, 5, 10), k = c(2, 3, 5))
+settings$equal <- NA
+
+for (i in 1:nrow(settings)) {
+  d <- sim_data(settings$n[i], settings$p[i], settings$k[i])
+  ours <- kmeans625(d$x, centers = d$init, iter.max = 100)
+  ref <- stats::kmeans(d$x, centers = d$init, iter.max = 100,
+                       algorithm = "Lloyd")
+  settings$equal[i] <-
+    isTRUE(all.equal(ours$cluster, ref$cluster, check.attributes = FALSE)) &&
+    isTRUE(all.equal(ours$centers, ref$centers, check.attributes = FALSE)) &&
+    isTRUE(all.equal(ours$tot.withinss, ref$tot.withinss))
+}
+settings
+```
+
+## Efficiency
+
+`bench::mark()` times both functions on simulated data of two sizes,
+from the same starting centers.
+
+```{r bench}
+set.seed(625)
+timings <- data.frame(n = c(500, 2000), kmeans625_ms = NA, stats_ms = NA)
+
+for (i in 1:nrow(timings)) {
+  d <- sim_data(timings$n[i], p = 5, k = 3)
+  res <- bench::mark(
+    kmeans625 = kmeans625(d$x, centers = d$init, iter.max = 100),
+    stats = stats::kmeans(d$x, centers = d$init, iter.max = 100,
+                          algorithm = "Lloyd"),
+    check = FALSE,
+    filter_gc = FALSE
+  )
+  # Median time in milliseconds
+  timings$kmeans625_ms[i] <- round(as.numeric(res$median[1]) * 1000, 2)
+  timings$stats_ms[i] <- round(as.numeric(res$median[2]) * 1000, 2)
+}
+timings
+```
+
+`stats::kmeans()` is faster, and the gap grows with `n`. This is
+expected: its iteration is written in compiled C, while `kmeans625()` is
+written in R and computes all pairwise distances at each step.
