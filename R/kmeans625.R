@@ -4,6 +4,25 @@
 #' its nearest center and moving each center to the mean of its points, until
 #' the assignments stop changing.
 #'
+#' @details
+#' When `centers` is a number k, k distinct rows of `x` are chosen at random
+#' as the starting centers, so results depend on the random seed; call
+#' [set.seed()] first for reproducible results. Because the final clusters
+#' depend on where the algorithm starts, `nstart` can be used to try several
+#' random starts and keep the best one. When `centers` is a matrix, the result
+#' is fully determined and `nstart` is ignored.
+#'
+#' Started from the same centers, the result matches
+#' `stats::kmeans(x, centers, algorithm = "Lloyd")`. The two functions differ
+#' in two cases:
+#' * With `nstart` of 2 or more, they draw their random starts differently,
+#'   so the same seed gives different starting centers.
+#' * If a cluster ends up with no points, `kmeans625()` stops with an error,
+#'   while [stats::kmeans()] gives a warning.
+#'
+#' The algorithm is written in plain R, so it is slower than
+#' [stats::kmeans()], whose iteration is compiled C code.
+#'
 #' @param x A numeric matrix or data frame, one observation per row.
 #' @param centers Either the number of clusters or a matrix of starting
 #'   centers with one row per cluster.
@@ -33,12 +52,33 @@
 #' When `nstart` is greater than 1, these describe the run with the smallest
 #' `tot.withinss`.
 #'
+#' @seealso [stats::kmeans()], which this function re-implements.
+#'
 #' @examples
 #' x <- as.matrix(iris[, 1:4])
+#'
+#' # Three clusters from one random start
 #' set.seed(625)
 #' fit <- kmeans625(x, centers = 3)
 #' fit$size
 #' fit$centers
+#' fit$tot.withinss
+#'
+#' # A single start can settle on a poor split; keeping the best of ten
+#' # random starts gives a much smaller tot.withinss
+#' set.seed(625)
+#' fit10 <- kmeans625(x, centers = 3, iter.max = 50, nstart = 10)
+#' fit10$tot.withinss
+#' table(cluster = fit10$cluster, species = iris$Species)
+#'
+#' # Supply the starting centers (one row from each species)
+#' init <- x[c(1, 51, 101), ]
+#' fit_init <- kmeans625(x, centers = init)
+#' fit_init$size
+#'
+#' # Same result as stats::kmeans() from the same starting centers
+#' ref <- stats::kmeans(x, centers = init, algorithm = "Lloyd")
+#' all.equal(fit_init$cluster, ref$cluster, check.attributes = FALSE)
 #'
 #' @export
 kmeans625 <- function(x,
