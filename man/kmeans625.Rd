@@ -19,8 +19,26 @@ The run with the lowest \code{tot.withinss} is kept. Ignored when \code{centers}
 is a matrix. Default = 1}
 }
 \value{
-A list with components \code{cluster}, \code{centers}, \code{totss}, \code{withinss},
-\code{tot.withinss}, \code{betweenss}, \code{size} and \code{iter}, same as \code{\link[stats:kmeans]{stats::kmeans()}}.
+A list with the same components as \code{\link[stats:kmeans]{stats::kmeans()}}:
+\describe{
+\item{\code{cluster}}{Integer vector with one entry per row of \code{x}, giving
+the cluster (from 1 to k) that each point is assigned to.}
+\item{\code{centers}}{Matrix of final cluster centers, with one row per
+cluster and one column per column of \code{x}.}
+\item{\code{totss}}{Total sum of squares: the sum of squared distances from
+each point to the overall mean of \code{x}.}
+\item{\code{withinss}}{Vector of within-cluster sums of squares, one per
+cluster: the sum of squared distances from each point to the center
+of its own cluster.}
+\item{\code{tot.withinss}}{Total within-cluster sum of squares,
+\code{sum(withinss)}. Smaller values mean tighter clusters.}
+\item{\code{betweenss}}{Between-cluster sum of squares,
+\code{totss - tot.withinss}.}
+\item{\code{size}}{Number of points in each cluster.}
+\item{\code{iter}}{Number of iterations performed.}
+}
+When \code{nstart} is greater than 1, these describe the run with the smallest
+\code{tot.withinss}.
 }
 \description{
 Groups the rows of \code{x} into clusters by repeatedly assigning each point to

@@ -12,8 +12,26 @@
 #'   The run with the lowest `tot.withinss` is kept. Ignored when `centers`
 #'   is a matrix. Default = 1
 #'
-#' @return A list with components `cluster`, `centers`, `totss`, `withinss`,
-#'   `tot.withinss`, `betweenss`, `size` and `iter`, same as [stats::kmeans()].
+#' @return A list with the same components as [stats::kmeans()]:
+#' \describe{
+#'   \item{`cluster`}{Integer vector with one entry per row of `x`, giving
+#'     the cluster (from 1 to k) that each point is assigned to.}
+#'   \item{`centers`}{Matrix of final cluster centers, with one row per
+#'     cluster and one column per column of `x`.}
+#'   \item{`totss`}{Total sum of squares: the sum of squared distances from
+#'     each point to the overall mean of `x`.}
+#'   \item{`withinss`}{Vector of within-cluster sums of squares, one per
+#'     cluster: the sum of squared distances from each point to the center
+#'     of its own cluster.}
+#'   \item{`tot.withinss`}{Total within-cluster sum of squares,
+#'     `sum(withinss)`. Smaller values mean tighter clusters.}
+#'   \item{`betweenss`}{Between-cluster sum of squares,
+#'     `totss - tot.withinss`.}
+#'   \item{`size`}{Integer vector of the number of points in each cluster.}
+#'   \item{`iter`}{Number of iterations performed.}
+#' }
+#' When `nstart` is greater than 1, these describe the run with the smallest
+#' `tot.withinss`.
 #'
 #' @examples
 #' x <- as.matrix(iris[, 1:4])
