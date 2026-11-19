@@ -195,10 +195,16 @@ lloyd_run <- function(x, centers, iter.max) {
 # Returns an integer vector of length n with values 1-k. Ties go to the
 # lowest-numbered cluster so results are reproducible.
 assign_clusters <- function(x, centers) {
+  n <- nrow(x)
   k <- nrow(centers)
-  # Calculate distances to centers and assign to closest ones
-  # NOTE: may rewrite to speed up/avoid using stats::dist
-  D <- as.matrix(stats::dist(rbind(centers, x)))[-(1:k), 1:k, drop = FALSE]
+  # n x k matrix of squared distances from each point to each center
+  D <- matrix(0, nrow = n, ncol = k)
+  for (j in 1:k) {
+    # Repeat center j down n rows so it lines up with x
+    diff <- x - rep(centers[j, ], each = n)
+    D[, j] <- rowSums(diff^2)
+  }
+  # Closest center for each point (smallest distance = largest of -D)
   return(max.col(-D, ties.method = "first"))
 }
 

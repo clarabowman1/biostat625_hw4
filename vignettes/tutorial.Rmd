@@ -132,12 +132,13 @@ settings
 
 ## Efficiency
 
-`bench::mark()` times both functions on simulated data of two sizes,
-from the same starting centers.
+`bench::mark()` times both functions on simulated data of four sizes,
+from 500 to 100,000 rows, from the same starting centers.
 
 ```{r bench}
 set.seed(625)
-timings <- data.frame(n = c(500, 2000), kmeans625_ms = NA, stats_ms = NA)
+sizes <- c(500L, 2000L, 20000L, 100000L)
+timings <- data.frame(n = sizes, kmeans625_ms = NA, stats_ms = NA)
 
 for (i in 1:nrow(timings)) {
   d <- sim_data(timings$n[i], p = 5, k = 3)
@@ -152,9 +153,11 @@ for (i in 1:nrow(timings)) {
   timings$kmeans625_ms[i] <- round(as.numeric(res$median[1]) * 1000, 2)
   timings$stats_ms[i] <- round(as.numeric(res$median[2]) * 1000, 2)
 }
+# How many times slower kmeans625() is
+timings$ratio <- round(timings$kmeans625_ms / timings$stats_ms, 1)
 timings
 ```
 
-`stats::kmeans()` is faster, and the gap grows with `n`. This is
-expected: its iteration is written in compiled C, while `kmeans625()` is
-written in R and computes all pairwise distances at each step.
+`stats::kmeans()` is faster, which is expected since it is written and
+compiled in C, while `kmeans625()` is written in R. The gap stays at a
+few times and does not significantly grow with `n`.
