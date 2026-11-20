@@ -54,14 +54,11 @@ random starts and keep the best one. When \code{centers} is a matrix, the result
 is fully determined and \code{nstart} is ignored.
 
 Started from the same centers, the result matches
-\code{stats::kmeans(x, centers, algorithm = "Lloyd")}. The two functions differ
-in two cases:
-\itemize{
-\item With \code{nstart} of 2 or more, they draw their random starts differently,
-so the same seed gives different starting centers.
-\item If a cluster ends up with no points, \code{kmeans625()} stops with an error,
-while \code{\link[stats:kmeans]{stats::kmeans()}} gives a warning.
-}
+\code{stats::kmeans(x, centers, algorithm = "Lloyd")}, including when a cluster
+ends up with no points: both give a warning and return a \code{NaN} center, a
+\code{size} of 0 and a \code{withinss} of 0 for that cluster. With \code{nstart} of 2 or
+more, the two functions draw their random starts differently, so the same
+seed gives different starting centers.
 
 The algorithm is written in plain R, so it is slower than
 \code{\link[stats:kmeans]{stats::kmeans()}}, whose iteration is compiled C code.

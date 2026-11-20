@@ -13,12 +13,11 @@
 #' is fully determined and `nstart` is ignored.
 #'
 #' Started from the same centers, the result matches
-#' `stats::kmeans(x, centers, algorithm = "Lloyd")`. The two functions differ
-#' in two cases:
-#' * With `nstart` of 2 or more, they draw their random starts differently,
-#'   so the same seed gives different starting centers.
-#' * If a cluster ends up with no points, `kmeans625()` stops with an error,
-#'   while [stats::kmeans()] gives a warning.
+#' `stats::kmeans(x, centers, algorithm = "Lloyd")`, including when a cluster
+#' ends up with no points: both give a warning and return a `NaN` center, a
+#' `size` of 0 and a `withinss` of 0 for that cluster. With `nstart` of 2 or
+#' more, the two functions draw their random starts differently, so the same
+#' seed gives different starting centers.
 #'
 #' The algorithm is written in plain R, so it is slower than
 #' [stats::kmeans()], whose iteration is compiled C code.
@@ -166,10 +165,16 @@ lloyd_run <- function(x, centers, iter.max) {
   if (!converged) {
     warning("did not converge in ", iter.max, " iterations")
   }
+  size <- tabulate(cluster, nbins = k)
+  if (any(size == 0)) {
+    warning("empty cluster: try a better set of initial centers")
+  }
   
   # Squared distance from each point to the center of its own cluster
   sq_dist <- rowSums((x - centers[cluster, , drop = FALSE])^2)
-  withinss <- as.vector(rowsum(sq_dist, cluster))
+  # Empty clusters have a within-cluster sum of squares of 0
+  withinss <- rep(0, k)
+  withinss[size > 0] <- rowsum(sq_dist, cluster)
   tot.withinss <- sum(withinss)
   # Squared distance from each point to the overall mean
   totss <- sum((x - rep(colMeans(x), each = n))^2)
@@ -183,7 +188,7 @@ lloyd_run <- function(x, centers, iter.max) {
       withinss = withinss,
       tot.withinss = tot.withinss,
       betweenss = totss - tot.withinss,
-      size = tabulate(cluster, nbins = k),
+      size = size,
       iter = iter
     )
   )
@@ -204,6 +209,9 @@ assign_clusters <- function(x, centers) {
     diff <- x - rep(centers[j, ], each = n)
     D[, j] <- rowSums(diff^2)
   }
+  # An empty cluster has a NaN center; treat it as infinitely far away so
+  # no point is assigned to it
+  D[is.na(D)] <- Inf
   # Closest center for each point (smallest distance = largest of -D)
   return(max.col(-D, ties.method = "first"))
 }
@@ -216,9 +224,13 @@ assign_clusters <- function(x, centers) {
 update_centers <- function(x, cluster, k) {
   # Number of points in each cluster
   size <- tabulate(cluster, nbins = k)
-  if (any(size == 0)) {
-    stop("empty cluster: try a different set of initial centers")
-  }
-  # Column sums within each cluster (k x p), divided by cluster sizes
-  return(rowsum(x, cluster) / size)
+  # Start with every center as NaN; an empty cluster keeps a NaN center,
+  # as in stats::kmeans()
+  centers <- matrix(NaN, nrow = k, ncol = ncol(x),
+                    dimnames = list(1:k, colnames(x)))
+  # Column sums of the non-empty clusters (in label order), divided by
+  # their sizes
+  filled <- size > 0
+  centers[filled, ] <- rowsum(x, cluster) / size[filled]
+  return(centers)
 }

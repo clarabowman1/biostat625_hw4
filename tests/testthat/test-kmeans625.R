@@ -43,11 +43,17 @@ test_that("nstart must be a whole number that is at least 1", {
 
 # Error and warning while algorithm runs
 
-test_that("a center that attracts no points gives an empty-cluster error", {
+test_that("an empty cluster gives a warning and matches stats::kmeans", {
   x <- matrix(c(0, 0, 10, 10, 0, 1, 10, 11), ncol = 2)
   # The third center is far from every point, so its cluster stays empty
   init <- rbind(c(0, 0), c(10, 10), c(1000, 1000))
-  expect_error(kmeans625(x, init), "empty cluster")
+  expect_warning(ours <- kmeans625(x, init), "empty cluster")
+  ref <- suppressWarnings(stats::kmeans(x, init, algorithm = "Lloyd"))
+  expect_equal(ours$cluster, ref$cluster, ignore_attr = TRUE)
+  expect_equal(ours$centers, ref$centers, ignore_attr = TRUE)
+  expect_equal(ours$withinss, ref$withinss)
+  expect_equal(ours$size, ref$size)
+  expect_equal(ours$iter, ref$iter)
 })
 
 test_that("reaching iter.max without converging gives a warning", {
